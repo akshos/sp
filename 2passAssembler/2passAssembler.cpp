@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_TEXT_RECORD_SIZE 12
+
 using namespace std;
 
 struct OPTAB
@@ -149,7 +151,7 @@ int pass1()
         output.close();
 }
 
-void storeSymtab()
+void storeSymtab() //stores the contents of the symtab struct array to a file for debug
 {
         ofstream sym( "symtab" );
         for( int i = 0; i < symtab_count; i++ )
@@ -158,12 +160,22 @@ void storeSymtab()
         }
 }
 
-int initializeTextRecord( ofstream &output, int startAddress )
+int initializeTextRecord( ofstream &output, int startAddress ) //starts a new text record
 {
-        output << "T " << setw(6) << setfill('0') << hex << startAddress << " ";
-        int pos = output.tellp();
-        output << "00 ";
-        return pos;
+        output << "T " << setw(6) << setfill('0') << hex << startAddress << " "; //wrtie T and start address
+        int pos = output.tellp(); //get the position for the length field
+        output << "00 "; //write a dummy length
+        return pos; //return the position of the length field
+}
+
+int endTextRecord( ofstream &output, int textRecordLengthPos, int textRecordLength ) //ends a text record
+{
+        int cur = output.tellp(); //backup the current put pointer position
+        output.seekp(textRecordLengthPos); //seek the put pointer to the position of length field of the current text record 
+        output << setw(2) << setfill('0') << hex << textRecordLength; //write the correct length value at the position
+        output.seekp(cur); //restore the original put pointer position
+        output << endl; //end the text record by a new line
+        return 0; 
 }
 
 void pass2()
@@ -171,7 +183,7 @@ void pass2()
         ifstream input( "intermediate" );
         ofstream output( "object" );
         char label[30], opcode[30], operand[30];
-        int startAddress = 0, locctr, textRecordLength = 0, textRecordLengthPos, index;
+        int startAddress = 0, locctr, textRecordLength = 0, textRecordLengthPos, index, value;
         input >>hex>> locctr >> label >> opcode; //read first input line
         if( strcmp( opcode, "START" ) == 0 ) //if opcode = START
         {
@@ -201,24 +213,48 @@ void pass2()
                         }
                         textRecordLength += 3;
                 }
-                input >> hex >> locctr >> label >> opcode;
+                else if ( strcmp( opcode, "WORD" ) == 0 ) //if opcode = WORD
+                {
+                        input >> value; //read the operand value as int
+                        output << setw(6) << setfill('0') << hex << value << " "; //write the operand value as hex
+                        textRecordLength += 3;
+                }
+                else if( strcmp( opcode, "BYTE" ) == 0 ) //if opcode = BYTE
+                {
+                        input >> operand; //read the operand as a string
+                        output << operand << " " ; //write the operand as string
+                        textRecordLength += ( byte_length( operand ) / 2 );
+                }
+                else if( strcmp( opcode, "RESB" ) == 0 || strcmp( opcode, "RESW" ) == 0 ) //if opcode = RESB or opcode = RESW
+                {
+                        //endTextRecord() returns 0 which is used to reset the textRecordLength variable to 0 after ending the current text record
+                        textRecordLength = endTextRecord( output, textRecordLengthPos, textRecordLength ); //finish the current text record
+                        while( strcmp( opcode, "RESB" ) == 0 || strcmp( opcode, "RESW" ) == 0 ) //read any successive RESW or RESB
+                        {
+                                input >> value;
+                                input >> hex >> locctr >> label >> opcode;
+                        }
+                        if( strcmp( opcode, "END" ) != 0 ) //if END of input is not reached
+                                textRecordLengthPos = initializeTextRecord( output, locctr ); //start a new text record  
+                        continue;
+                }
+                input >> hex >> locctr >> label >> opcode; //read next input line
+                if( textRecordLength >= MAX_TEXT_RECORD_SIZE || strcmp( opcode, "END" ) == 0 ) //if text record length limit has been reached or END opcode was reached
+                {
+                        textRecordLength = endTextRecord( output, textRecordLengthPos, textRecordLength ); //finish the current text record
+                        if( strcmp( opcode, "END" )!= 0 )  //if the END opcode wasnt reached
+                                textRecordLengthPos = initializeTextRecord( output, locctr ); //start a new text record
+                }
         }
-
+        output << "E " << setw(6) << setfill('0') << hex << startAddress << endl; //write the end record 
 }
 
 int main()
 {
-        cout << "\nGenerating Optab" ;
         generateOptab();
-        cout << "\nStarting pass 1 ";
         pass1();
-        cout << "\nPass 1 finished " ;
-        cout << "\nStoring symtab ";
         storeSymtab();
-        cout << "\nSymtab stored ";
-        cout << "\nStarting pass2 ";
         pass2();
-        cout << "\nPass 2 finished ";
         return 0;
 }
 
