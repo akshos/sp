@@ -20,14 +20,6 @@ struct SYMTAB
 
 int optab_count = 0, symtab_count = 0, program_length = 0;
 
-void printOptab()
-{
-        for( int i = 0; i < optab_count; i++ )
-        {
-                cout << optab[i].opcode << " : " << hex << optab[i].machinecode << endl;
-        }
-}
-
 void generateOptab() //load optab contents from file
 {
         ifstream fin( "optab" );
@@ -40,8 +32,7 @@ void generateOptab() //load optab contents from file
                 optab[optab_count].machinecode = machinecode;
                 optab_count++;
                 fin >> opcode >> hex >> machinecode;
-        }
-        printOptab();           
+        }      
 }
 
 int searchSymtab( char symbol[] ) //returns the index of the symbol entry in symtab
@@ -65,7 +56,7 @@ int searchOptab( char opcode[] ) //returns the index of the opcode in the optab
                         return i;
                 }
         }
-        return 0;
+        return -1;
 }
 
 void insertSymtab( char label[], int value ) //insert a symbol name and value in symtab
@@ -205,7 +196,7 @@ void pass2()
                         }
                         else //if not found
                         {
-                                cout << "\n\nERROR : Undefined Symbol : " << label << "\n\n";
+                                cout << "\n\nERROR : Undefined Symbol : " << operand << "\n\n";
                                 return ;
                         }
                         textRecordLength += 3;
@@ -217,10 +208,17 @@ void pass2()
 
 int main()
 {
+        cout << "\nGenerating Optab" ;
         generateOptab();
+        cout << "\nStarting pass 1 ";
         pass1();
+        cout << "\nPass 1 finished " ;
+        cout << "\nStoring symtab ";
         storeSymtab();
+        cout << "\nSymtab stored ";
+        cout << "\nStarting pass2 ";
         pass2();
+        cout << "\nPass 2 finished ";
         return 0;
 }
 
