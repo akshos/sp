@@ -21,6 +21,7 @@ struct SYMTAB
 }symtab[100];
 
 int optab_count = 0, symtab_count = 0, program_length = 0;
+int modification_address[100], modification_count = 0;
 
 void generateOptab() //load optab contents from file
 {
@@ -127,7 +128,12 @@ int pass1()
                 output <<hex<< locctr << "\t" << label << "\t" << opcode << "\t";
                 //increment locctr with appropriate value
                 if( searchOptab( opcode ) != -1 )
-                        locctr += 3;
+                {
+                        if( opcode[0] == '+' ) 
+                                locctr += 4;
+                        else
+                                locctr += 3;
+                }
                 else if( strcmp( opcode, "WORD" ) == 0 )
                         locctr += 3;
                 else if( strcmp( opcode, "RESW" ) == 0 )
@@ -178,12 +184,22 @@ int endTextRecord( ofstream &output, int textRecordLengthPos, int textRecordLeng
         return 0; 
 }
 
+void generateModificationRecords( ofstream &output )
+{
+        for( int i = 0; i < modification_count; i++ )
+        {
+                output << "M " << setw(6) << setfill('0') << hex << modification_address[i];
+                output << " 05" << endl;
+        }
+} 
+
 void pass2()
 {
         ifstream input( "intermediate" );
         ofstream output( "object" );
         char label[30], opcode[30], operand[30];
         int startAddress = 0, locctr, textRecordLength = 0, textRecordLengthPos, index, value;
+        int addressFieldSize = 4;
         input >>hex>> locctr >> label >> opcode; //read first input line
         if( strcmp( opcode, "START" ) == 0 ) //if opcode = START
         {
@@ -202,9 +218,15 @@ void pass2()
                         input >> operand; //read the operand
                         output << setw(2) << setfill('0')<< hex << optab[index].machinecode; //write machine code of opcode
                         index = searchSymtab( operand ); //search symtab for symbol
+                        if( opcode[0] == '+' )
+                        {
+                                addressFieldSize = 6;
+                                modification_address[modification_count++] = (locctr+1);
+                        } 
                         if( index != -1 ) //if symbol found
                         {
-                                output << setw(4) << setfill('0') << hex << symtab[index].value << " ";
+                                output << setw(addressFieldSize) << setfill('0') << hex << symtab[index].value << " ";
+                                addressFieldSize = 4;
                         }
                         else //if not found
                         {
@@ -242,10 +264,12 @@ void pass2()
                 if( textRecordLength >= MAX_TEXT_RECORD_SIZE || strcmp( opcode, "END" ) == 0 ) //if text record length limit has been reached or END opcode was reached
                 {
                         textRecordLength = endTextRecord( output, textRecordLengthPos, textRecordLength ); //finish the current text record
-                        if( strcmp( opcode, "END" )!= 0 )  //if the END opcode wasnt reached
+                         //if the END opcode wasnt reached and the next opcode is not RESW or RESB
+                        if( strcmp( opcode, "END" )!= 0 && strcmp( opcode, "RESB" ) != 0 && strcmp( opcode, "RESW" ) != 0 ) 
                                 textRecordLengthPos = initializeTextRecord( output, locctr ); //start a new text record
                 }
         }
+        generateModificationRecords( output );
         output << "E " << setw(6) << setfill('0') << hex << startAddress << endl; //write the end record 
 }
 
