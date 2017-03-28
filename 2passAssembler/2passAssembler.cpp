@@ -242,7 +242,8 @@ void pass2()
                 if( textRecordLength >= MAX_TEXT_RECORD_SIZE || strcmp( opcode, "END" ) == 0 ) //if text record length limit has been reached or END opcode was reached
                 {
                         textRecordLength = endTextRecord( output, textRecordLengthPos, textRecordLength ); //finish the current text record
-                        if( strcmp( opcode, "END" )!= 0 )  //if the END opcode wasnt reached
+                        //if the END opcode wasnt reached and the next opcode is not RESB or RESW
+                        if( strcmp( opcode, "END" ) != 0 && strcmp( opcode, "RESB" ) != 0 && strcmp( opcode, "RESW" ) != 0  )  
                                 textRecordLengthPos = initializeTextRecord( output, locctr ); //start a new text record
                 }
         }
