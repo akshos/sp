@@ -1,0 +1,24 @@
+6
+E -> E+T
+E -> T
+T -> T*F
+T -> F
+F -> (E)
+F -> i
+
+4
+X -> AaB
+A -> b
+A -> 0 
+B -> c 
+
+6
+X -> ABC
+A -> a
+A -> 0 
+B -> b
+C -> c 
+C -> 0
+
+
+

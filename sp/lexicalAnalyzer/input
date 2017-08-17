@@ -1,0 +1,17 @@
+#include<iostream>
+
+using namespace std;
+
+int main()
+{
+	char str[25];
+	int a, b, sum;
+	cout << "\n Enter a string :";
+	cin >> str;
+	cout << "\n String is "<< str;
+	cout << "Enter two numbers : ";
+	cin >> a >> b;
+	sum = a + b;
+	cout << "The sum is : " << sum;
+	retutn 0;
+}

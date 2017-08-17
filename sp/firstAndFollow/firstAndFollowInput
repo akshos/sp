@@ -1,0 +1,26 @@
+8
+E -> TA
+A -> +TA
+A -> 0
+T -> FB
+B -> *FB
+B -> 0
+F -> (E)
+F -> i
+
+4
+X -> AaB
+A -> b
+A -> 0 
+B -> c 
+
+6
+X -> ABC
+A -> a
+A -> 0 
+B -> b
+C -> c 
+C -> 0
+
+
+

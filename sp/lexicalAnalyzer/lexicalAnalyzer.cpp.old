@@ -1,0 +1,282 @@
+#include <iostream>
+#include <string.h>
+#include <stdlib.h>
+#include <fstream>
+#include <ctype.h>
+
+#define START 0
+#define HALF 50
+#define BUFSIZE 100
+
+#define KEYWORD_COUNT 13
+
+using namespace std;
+
+char keywords[KEYWORD_COUNT][20] = { "int", "char", "double", "float", "bool", "return",
+			"using", "namespace", "if", "else", "do", "while", "for" };
+
+char buffer[BUFSIZE], token[100];
+ifstream input;
+int fp = 0, bp = 0;
+bool eof = false;
+
+int isKeyword( char lexeme[] )
+{
+	for( int i = 0; i < KEYWORD_COUNT; i++ )
+	{
+		if( strcmp( keywords[i], lexeme ) == 0 )
+			return 1;
+	}
+	return 0;
+}
+
+int isDelim( char ch )
+{
+	switch( ch )
+	{
+		case ' ' : 
+		case '\t' :
+		case '\n' : return 1;
+	}
+	return 0;
+}
+
+void loadBuffer_1()
+{
+	input.read( buffer, HALF );
+}
+
+void loadBuffer_2()
+{
+	char tmp[HALF];
+	input.read( tmp, HALF );
+	for( int i = 0; i < HALF; i++ )
+	{
+		buffer[HALF+i] = tmp[i];
+	}
+}
+
+void test()
+{
+	loadBuffer_1();
+	loadBuffer_2();
+	cout << buffer ;
+}
+
+void checkBufferLimit()
+{
+	if( fp == HALF )
+		loadBuffer_2();
+	else if( fp == BUFSIZE )
+	{
+		loadBuffer_1();
+		fp = 0;
+	}
+	if( buffer[fp] == '\0' )
+		eof = true;
+}
+
+void removeDelims()
+{
+	while( isDelim( buffer[fp] ) )
+	{
+		fp++;
+		checkBufferLimit();
+	}
+}
+
+void pre_directive()
+{
+	int n;
+	char str[] = " (preprocessorDirective)";
+	for( n = 0; buffer[fp] != '\n'; n++ )
+	{
+		token[n] = buffer[fp++];
+		checkBufferLimit();
+	}
+	token[n] = '\0';
+	strcat( token, str );
+}
+
+void  indentifierKeyword()
+{
+	int n = 0;
+	char str1[] = " <keyword>";
+	char str2[] = " <identifier>";
+	for( n = 0; isalnum( buffer[fp] ) || buffer[fp] == '_' ; n++ )
+	{
+		token[n] = buffer[fp++];
+		checkBufferLimit();
+	}
+	token[n] = '\0';
+	if( isKeyword( token ) )
+		strcat( token, str1 );
+	else
+		strcat( token, str2 );
+}
+
+void number()
+{
+	int n = 0;
+        char str[] = " <number>";
+	for(  n = 0; isdigit( buffer[fp] ); n++ )
+	{
+		token[n] = buffer[fp++];
+		checkBufferLimit();
+	}
+	token[n] = '\0';
+	strcat( token, str);
+}
+
+void stringLiteral()
+{
+	int n;
+	char str[] = " <string>";
+	fp++; //remove the leading quote "
+	for( n = 0; buffer[fp] != '\"'; n++ )
+	{
+		token[n] = buffer[fp++];
+		checkBufferLimit();
+	}
+	fp++; //remove the trailing quote "
+	token[n] = '\0';
+	strcat( token, str );
+}
+
+int checkAssignment( char op[] )
+{
+	char str[] = " <assignment>";
+	char assign[] = "==";
+	if( strcmp( op, assign ) == 0 )
+	{
+		strcpy( token, op );
+		strcat( token, str );
+		return 1;
+	}
+	return 0;
+}
+
+int checkArithmetic( char op[] )
+{
+	char str[] = " <arithmetic>";
+	switch( op[0] )
+	{
+		case '+' :
+		case '-' :
+		case '*' :
+		case '/' :
+		case '%' :
+			strcpy( token, op );
+			strcat( token, str );
+			return 1;
+	}
+	return 0;
+}
+
+int checkRelop( char op[] )
+{
+	char str[] = " <relop>";
+	switch( op[0] )
+	{
+		case '=' :
+		case '>' :
+		case '<' :
+			strcpy( token, op );
+			strcat( token, str );
+			return 1;
+	}
+	return 0;
+}
+
+int checkLogicalOp( char op[] )
+{
+	char str[] = " <logicalop>";
+	switch( op[0] )
+	{
+		case '&' :
+		case '|' :
+		case '!' :
+			strcpy( token, op );
+			strcat( token, str );
+			return 1;
+	}
+	return 0;
+}
+
+void symbol()
+{
+	int n;
+	char op[4], str[] = " <sym>";
+	for( n = 0; !isalnum( buffer[fp] ); n++ )
+	{
+		op[n] = buffer[fp++];
+		checkBufferLimit();
+	}
+	op[n] = '\0';
+	if( checkAssignment( op ) )
+		return;
+	else if( checkArithmetic( op ) )
+		return;
+	else if( checkRelop( op ) )
+		return;
+	else if( checkLogicalOp( op ) )
+		return;
+	else
+	{
+		strcpy( token, op );
+		strcat( token, str );
+		return;
+	}
+}
+
+void getToken()
+{
+	if( buffer[fp] == '#' )
+		pre_directive();
+	else if( isalpha( buffer[fp] ) )
+		indentifierKeyword();
+	else if( isdigit( buffer[fp] ) )
+		number();
+	else if( buffer[fp] == '\"' )
+		stringLiteral();
+	else if( buffer[fp] == '\0' )
+		eof = true;
+	else
+		symbol();
+}
+	
+
+void analyze()
+{
+	loadBuffer_1();
+	int count = 0;
+	while( eof == false )
+	{
+		removeDelims();
+		bp = fp;
+		getToken();
+		cout << token << endl;
+		/*if( count == 4 )
+		{
+			cout << endl;
+			count = 0;
+		}
+		count ++;*/
+	}
+}
+			
+
+int main()
+{
+	fp = 0;
+	bp = 0;
+	input.open( "input" );
+	if( !input )
+	{
+		cout << "\nERROR : Cannot open input file\n" ;
+		return 1;
+	}
+	//test();
+	analyze();
+	return 0;
+}

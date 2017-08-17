@@ -1,0 +1,73 @@
+#include <iostream>
+#include <string>
+#include <stdlib>
+
+using namespace std;
+
+struct NODE
+{
+	char str[30];
+	struct NODE *next;
+	struct LHS *lhs;
+};
+
+struct LHS
+{
+	char lhs;
+	struct lhs *next;
+	struct NODE *node;
+};
+
+NODE *createNode( char str[] )
+{
+	NODE *tmp = new NODE;
+	strcpy( tmp->str, str );
+	tmp->next = NULL;
+	tmp->lhs = NULL;
+	return tmp;
+}
+
+NODE *insertNode( NODE *ptr, LHS *pro, char str[] )
+{
+	if( ptr != NULL )
+		ptr->next = insertNode( pro->node, pro, str );
+	ptr = createNode( str );
+	ptr->lhs = pro;
+	return ptr;
+}
+
+void addProduction( LHS *pro, char lhs, char str[] )
+{
+	int n = 0;
+	while( pro->next != NULL )
+	{
+		if( pro->lhs == lhs )
+			break;
+		pro = pro->next;
+	}
+	if( pro->lhs != lhs )
+	{
+		pro->next = new production;
+		pro = pro->next;
+		pro->lhs = lhs;
+	}
+	pro->node = insertNode( pro->node, pro, str );
+}
+	
+	
+
+production *find_lhs( LHS *pro, char item )
+{
+	while( pro != NULL )
+	{
+		if( pro->lhs == item )
+			return pro;
+	}
+	return NULL;
+}
+
+int main()
+{
+	return 0;
+}
+

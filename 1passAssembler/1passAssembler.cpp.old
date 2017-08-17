@@ -7,12 +7,18 @@
 
 using namespace std;
 
+struct node
+{
+	int position;
+	struct node *next;
+};
+
 struct SYMTAB
 {
 	char symbol[30];
 	int value;
 	bool defined;
-	int ref[10], refCount;
+	struct node *ref = NULL;
 }symtab[100];
 
 struct OPTAB
@@ -69,25 +75,29 @@ void writeOperand( int operand, int position = -1 ) //writes the address of the 
 
 void insertSymtab( char symbol[], int value, int index, bool defined = true )
 {
-	int pos, putPointer, i = 0;
 	if( index == -1 ) //symbol is not present in the table
 	{
 		strcpy( symtab[symtab_count].symbol, symbol );
 		symtab[symtab_count].value = value;
 		symtab[symtab_count].defined = defined;
-		symtab[symtab_count].refCount = 0;
 		if( defined == false ) //symbol was not defined
 		{
-			pos = symtab[symtab_count].refCount++; //add the referencing location to the list
-			symtab[symtab_count].ref[ pos ] = output.tellp();
+			symtab[symtab_count].ref = new node;
+			symtab[symtab_count].ref->position = output.tellp(); //store the location where the symbol was referenced
+			symtab[symtab_count].ref->next = NULL;
 		}
 		symtab_count++;
 		return;
 	}
 	if( defined == false ) //symbol is present but not defined
 	{
-		pos = symtab[index].refCount++; //add the referencing location to the list
-		symtab[index].ref[ pos ] = output.tellp();
+		node *ptr = symtab[index].ref;
+		while( ptr->next != NULL ) //add the referencing location to the list
+			ptr = ptr->next;
+		ptr->next = new node;
+		ptr = ptr->next;
+		ptr->position = output.tellp();
+		ptr->next = NULL;
 		return;
 	}
 	if( symtab[index].defined == true ) //symbol was already previously defined 
@@ -97,15 +107,17 @@ void insertSymtab( char symbol[], int value, int index, bool defined = true )
 	}
 	symtab[index].value = value; //symbol was previously encountered but is defined now
 	symtab[index].defined = defined;
-	pos = symtab[index].refCount;
-	putPointer = output.tellp();
-	i = 0;
-	while( i < pos )
+	node *ptr = symtab[index].ref;
+	if( ptr != NULL )
 	{
-		writeOperand( value, symtab[index].ref[i] );
-		i++;
+		int putPointer = output.tellp();
+		while( ptr != NULL )
+		{
+			writeOperand( value, ptr->position );
+			ptr = ptr->next;
+		}
+		output.seekp(putPointer);
 	}
-	output.seekp(putPointer);
 }
 
 int byte_length( char operand[] ) //returns length of operand in bytes

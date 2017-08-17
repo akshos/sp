@@ -1,0 +1,12 @@
+LDX     04
+LDA     00
+TD      e0
+JEQ     30
++JEQ    31
+RD      d8
+COMP    28
+STCH    54
+TIX     2c
+JLT     38
++JLT    39
+STX     10
